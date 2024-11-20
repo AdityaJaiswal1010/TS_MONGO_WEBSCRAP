@@ -42,7 +42,7 @@ var dotenv = require("dotenv");
 dotenv.config();
 function main() {
     return __awaiter(this, void 0, void 0, function () {
-        var uri, client, db, collection, uuids, i, batch, uuidDocs, charCountMap, _i, uuidDocs_1, doc, charCount, key, averageSharedCount;
+        var uri, client, db, collection, uuids, i, batch, uuidDocs, charCountMap, _i, uuidDocs_1, doc, charCount, key, totalSharedCounts, uniqueProfiles, averageSharedCount;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
@@ -54,12 +54,15 @@ function main() {
                     _a.label = 1;
                 case 1:
                     _a.trys.push([1, , 8, 10]);
+                    // Connect to MongoDB
                     return [4 /*yield*/, client.connect()];
                 case 2:
+                    // Connect to MongoDB
                     _a.sent();
                     console.log("Connected to MongoDB");
                     db = client.db("test");
                     collection = db.collection("uuid");
+                    // Step 1: Insert 100,000 UUIDs into the collection
                     console.log("Inserting 100,000 UUIDs...");
                     uuids = Array.from({ length: 100000 }, function () { return ({ _id: (0, uuid_1.v4)() }); });
                     i = 0;
@@ -76,6 +79,7 @@ function main() {
                     return [3 /*break*/, 3];
                 case 6:
                     console.log("UUIDs inserted.");
+                    // Step 2: Analyze UUIDs for per-character counts
                     console.log("Analyzing UUIDs...");
                     return [4 /*yield*/, collection.find().toArray()];
                 case 7:
@@ -85,27 +89,39 @@ function main() {
                         doc = uuidDocs_1[_i];
                         charCount = getCharacterCount(doc._id);
                         key = JSON.stringify(charCount);
-                        charCountMap.set(key, (charCountMap.get(key) || 0) + 1);
+                        charCountMap.set(key, (charCountMap.get(key) || 0) + 1); // Count occurrences
                     }
-                    averageSharedCount = Array.from(charCountMap.values()).reduce(function (a, b) { return a + b; }, 0) /
-                        charCountMap.size;
+                    totalSharedCounts = Array.from(charCountMap.values()).reduce(function (a, b) { return a + b; }, 0);
+                    uniqueProfiles = charCountMap.size;
+                    averageSharedCount = totalSharedCounts / uniqueProfiles;
+                    console.log("Total number of UUIDs sharing the same per-character counts: ".concat(totalSharedCounts));
                     console.log("Average number of UUIDs sharing the same per-character counts: ".concat(averageSharedCount));
                     return [3 /*break*/, 10];
-                case 8: return [4 /*yield*/, client.close()];
+                case 8: 
+                // Ensure the client is closed
+                return [4 /*yield*/, client.close()];
                 case 9:
+                    // Ensure the client is closed
                     _a.sent();
+                    console.log("Connection to MongoDB closed.");
                     return [7 /*endfinally*/];
                 case 10: return [2 /*return*/];
             }
         });
     });
 }
+/**
+ * Function to calculate the character count profile for a UUID.
+ * @param uuid - UUID string
+ * @returns A record object with character counts
+ */
 function getCharacterCount(uuid) {
     var charCount = {};
-    for (var _i = 0, uuid_2 = uuid; _i < uuid_2.length; _i++) {
-        var char = uuid_2[_i];
+    for (var _i = 0, _a = uuid.replace(/-/g, ""); _i < _a.length; _i++) { // Remove hyphens for accurate counts
+        var char = _a[_i];
         charCount[char] = (charCount[char] || 0) + 1;
     }
     return charCount;
 }
+// Run the main function
 main().catch(console.error);
