@@ -38,9 +38,10 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
 Object.defineProperty(exports, "__esModule", { value: true });
 var axios_1 = require("axios");
 var cheerio = require("cheerio");
+var namer = require("color-namer");
 function fetchProductDetails(url) {
     return __awaiter(this, void 0, void 0, function () {
-        var data, $_1, imageUrls_1, description_1, colors_1, sizes_1, price, error_1;
+        var data, $_1, imageUrls_1, description_1, colors_1, colorsOnUrl_1, sizes_1, price, error_1;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
@@ -56,13 +57,11 @@ function fetchProductDetails(url) {
                         .each(function (_, element) {
                         var src = $_1(element).attr('src');
                         if (src) {
-                            // Prepend https: if the src is a relative URL
                             imageUrls_1.push(src.startsWith('http') ? src : "https:".concat(src));
                         }
                     });
                     description_1 = [];
                     $_1('div.product-details__content-inner ul li').each(function (_, element) {
-                        // Find the text content inside the <span> within each <li>
                         var text = $_1(element).find('span').text().trim();
                         if (text) {
                             description_1.push(text);
@@ -70,9 +69,24 @@ function fetchProductDetails(url) {
                     });
                     colors_1 = [];
                     $_1('div.product__offers div.product__swatches div.product__swatches a').each(function (_, element) {
+                        var _a;
+                        var style = $_1(element).attr('style');
+                        if (style) {
+                            var colorCodeMatch = style.match(/background-color:\s?(#[a-fA-F0-9]{6}|#[a-fA-F0-9]{3}|rgba?\(.*?\));/);
+                            if (colorCodeMatch) {
+                                var colorCode = colorCodeMatch[1]; // Extract color code
+                                var namedColor = namer(colorCode); // Convert to name
+                                var colorName = ((_a = namedColor.ntc[0]) === null || _a === void 0 ? void 0 : _a.name) || 'Unknown Color'; // Use nearest match
+                                colors_1.push(colorName);
+                            }
+                        }
+                    });
+                    colorsOnUrl_1 = [];
+                    $_1('div.product__offers div.product__swatches div.product__swatches a').each(function (_, element) {
                         var href = $_1(element).attr('href');
-                        if (href)
-                            colors_1.push(href);
+                        if (href) {
+                            colorsOnUrl_1.push(href);
+                        }
                     });
                     sizes_1 = [];
                     $_1('select#SingleOptionSelector-0 option').each(function (_, element) {
@@ -82,12 +96,14 @@ function fetchProductDetails(url) {
                         }
                     });
                     price = $_1('span[data-product-price]').text().trim();
+                    // Return product details
                     return [2 /*return*/, {
                             imageUrls: imageUrls_1,
                             description: description_1,
                             colors: colors_1,
                             sizes: sizes_1,
                             price: price,
+                            colorsOnUrl: colorsOnUrl_1,
                         }];
                 case 2:
                     error_1 = _a.sent();
@@ -98,22 +114,25 @@ function fetchProductDetails(url) {
         });
     });
 }
-// Example usage
+// Function to extract only the color names from product URLs
+var extractColors = function (colorArray) {
+    return colorArray.map(function (colorUrl) {
+        var segments = colorUrl.split('/');
+        var lastSegment = segments[segments.length - 1];
+        return lastSegment
+            .replace(/harmony|knit|jumper|sweater|arrowtown/gi, '')
+            .replace(/-+/g, ' ')
+            .trim();
+    });
+};
 var productUrl = 'https://us.princesspolly.com/products/harmony-sweater-blue';
 fetchProductDetails(productUrl).then(function (details) {
     if (details) {
-        var colors = details.colors; // Assuming details.colors is a string array
-        var colorNames = colors.map(function (url) {
-            // Split the URL by '/' and take the last part
-            var segments = url.split('/');
-            var lastSegment = segments[segments.length - 1];
-            return lastSegment.replace(/-/g, ' '); // Replace hyphens with spaces for readability
-        });
-        details.colors = colorNames; // Assign the processed color names back to details.colors
-        if (details.sizes && Array.isArray(details.sizes)) {
-            details.sizes = details.sizes.slice(1); // Creates a new array excluding the first element
-        }
         console.log('Product Details:', details);
+        // Extract and clean color names from URLs
+        var cleanedColors = extractColors(details.colorsOnUrl);
+        console.log("Colors based on product URL:");
+        console.log(cleanedColors);
     }
     else {
         console.log('Failed to fetch product details.');

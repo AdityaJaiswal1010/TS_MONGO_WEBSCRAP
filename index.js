@@ -58,7 +58,7 @@ function main() {
                 case 2:
                     _a.sent();
                     console.log("Connected to MongoDB");
-                    db = client.db("test1");
+                    db = client.db("test");
                     collection = db.collection("uuid");
                     console.log("Inserting 100,000 UUIDs...");
                     uuids = Array.from({ length: 100000 }, function () { return ({ _id: (0, uuid_1.v4)() }); });
